@@ -41,11 +41,8 @@ RUN pnpm install --prod --frozen-lockfile
 # Copy build output from builder
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/next.config.mjs ./next.config.mjs
-
-# Optional: copy package.json for next start
 COPY --from=builder /app/package.json ./package.json
 
-EXPOSE 3000
+EXPOSE 8080
 
 CMD ["pnpm", "start"]
