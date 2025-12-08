@@ -3,19 +3,14 @@
 # -------------------------
 FROM node:20-alpine AS builder
 
-# Set working directory
 WORKDIR /app
-
-# Enable corepack (for pnpm)
 RUN corepack enable
 
-# Copy lock file and package.json first (for caching)
-COPY package.json pnpm-lock.yaml ./
-
 # Install dependencies
+COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
-# Copy all project files
+# Copy project files
 COPY . .
 
 # Build Next.js project
@@ -28,21 +23,27 @@ RUN pnpm build
 FROM node:20-alpine AS runner
 
 WORKDIR /app
-
 ENV NODE_ENV=production
 
-# Enable corepack again
 RUN corepack enable
 
-# Install only production dependencies
+# --- Crear usuario no root ---
+# UID 1001 para evitar conflictos
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup -u 1001
+
+# Instalar solo dependencias de producción
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --prod --frozen-lockfile
 
-# Copy build output from builder
+# Copiar el build
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/package.json ./package.json
 
-EXPOSE 4321
+# --- Cambiar propiedad de la carpeta ---
+RUN chown -R appuser:appgroup /app
 
+USER appuser
+
+EXPOSE 4321
 CMD ["pnpm", "start"]
